@@ -1,0 +1,13 @@
+# Original file:
+**/*.pcap
+**/*.log
+**/*.logs
+
+# PyCharm
+.idea
+.venv
+**/__pycache__/**
+
+# Wordlist
+rockyou.txt
+fuzz.txt
