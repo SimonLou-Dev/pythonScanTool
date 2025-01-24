@@ -2,15 +2,17 @@ from enum import Enum
 
 import psutil
 import scapy.sendrecv
+from scapy.all import rdpcap
 import threading
-from scapy.layers.inet import IP
+from scapy.layers.inet import IP, ICMP, TCP, UDP
+from scapy.layers.http import HTTPRequest
+from scapy.layers.l2 import ARP
 
 from tools.utils.logger import Logger, LogLevel
+from tools.utils.frequencyAnalyser import FrequencyAnalyser
 
 
 class NetworkSourceType(Enum):
-    LOG_NGINX = 1
-    LOG_APACHE = 2
     LIVE_CAP = 3
     FILE_PCAP = 4
 
@@ -23,13 +25,15 @@ class NetworkModule:
     __iface: str | None
     __save: bool = False
     __logger: Logger
+    __namp_fscanner: FrequencyAnalyser
+    __fuzz_fscanner: FrequencyAnalyser
+    __ping_fscanner: FrequencyAnalyser
+    __arp_fscanner: FrequencyAnalyser
 
     def __init__(self, logger: Logger, mode: NetworkSourceType, file: str | None = None, iface: str | None = None, save: bool = False):
         self.__mode = mode
         self.__logger = logger
-        if mode == NetworkSourceType.LOG_NGINX or mode == NetworkSourceType.LOG_APACHE:
-            self.__file = file
-        elif mode == NetworkSourceType.LIVE_CAP:
+        if mode == NetworkSourceType.LIVE_CAP:
             self.__iface = self.__check_iface(iface)
             self.__save = save
         elif mode == NetworkSourceType.FILE_PCAP:
@@ -54,9 +58,13 @@ class NetworkModule:
         self.__logger.info(f" \t- Détecter les credentials HTTP en base64 : {enable_http_credentials}")
         self.__logger.info(f" \t- Mode : {self.__mode}")
 
-        if self.__mode == NetworkSourceType.LOG_NGINX or self.__mode == NetworkSourceType.LOG_APACHE:
-            self.__read_from_logs()
-        elif self.__mode == NetworkSourceType.LIVE_CAP:
+        self.__arp_fscanner = FrequencyAnalyser(self.__logger)
+        self.__fuzz_fscanner = FrequencyAnalyser(self.__logger)
+        self.__namp_fscanner = FrequencyAnalyser(self.__logger)
+        self.__ping_fscanner = FrequencyAnalyser(self.__logger)
+
+
+        if self.__mode == NetworkSourceType.LIVE_CAP:
             self.__read_live()
         elif self.__mode == NetworkSourceType.FILE_PCAP:
             self.__read_from_pcap()
@@ -65,11 +73,9 @@ class NetworkModule:
     ## Read from pcap
     def __read_from_pcap(self):
         self.__logger.info(f"Analyse du fichier pcap : {self.__file}")
-
-        pass
-
-    def __read_from_logs(self):
-        self.__logger.info(f"Analyse du fichier de logs : {self.__file}")
+        scapy_cap = rdpcap(self.__file)
+        for packet in scapy_cap:
+            self.__analyse_packet(packet)
 
         pass
 
@@ -82,6 +88,7 @@ class NetworkModule:
         self.__logger.info("Démarrage de la capture...")
         capture_thread = threading.Thread(target=self.__capture_thread)
         capture_thread.daemon = True  # Permet au thread de s'arrêter quand le programme principal termine
+
         capture_thread.start()
         input("")
         # Attente de l'utilisateur pour appuyer sur ENTER
@@ -97,17 +104,25 @@ class NetworkModule:
         if self.__save and self.__mode == NetworkSourceType.LIVE_CAP:
             scapy.sendrecv.wrpcap("capture.pcap", packet, append=True)
 
-        if packet.haslayer(IP):
-            ip_packet = packet[IP]
-            if ip_packet.proto == 1:
-                self.__logger.debug("C'est un paquet ICMP")
-            elif ip_packet.proto == 6:
-                self.__logger.debug("C'est un paquet ICMP")
-            elif ip_packet.proto == 17:
-                self.__logger.debug("C'est un paquet ICMP")
-            else:
-                self.__logger.debug("Protocole IP non identifié")
-
-        else:
-            self.__logger.debug("Protocole IP non identifié")
+        if packet.haslayer(ARP) and packet[ARP].op == 1: # Si c'est un paquet ARP
+            self.__logger.debug(f"Capture d'un packet ARP de {packet[ARP].psrc}")
+            self.__arp_fscanner.check({"src": packet[ARP].psrc}, int(packet.time))
+            return
+        if packet.haslayer(HTTPRequest) and packet.haslayer(IP):
+            host = packet[HTTPRequest].Host.decode()
+            self.__logger.debug(f"Capture d'un packet HTTP de {packet[IP].src} sur le site {host}")
+            self.__fuzz_fscanner.check({"src": packet[IP].src, "value": host}, int(packet.time))
+            return
+        if packet.haslayer(ICMP) and packet.haslayer(IP) and packet[ICMP].type == 8: #Si c'est une requête ICMP
+            self.__logger.debug(f"Capture d'un packet ICMP de {packet[IP].src}")
+            self.__ping_fscanner.check({"src": packet[IP].src}, int(packet.time))
+            return
+        if packet.haslayer(TCP) and packet.haslayer(IP):
+            #self.__logger.debug(f"Capture d'un packet TCP de {packet[IP].src} sur le port {packet[TCP].dport}")
+            self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
+            return
+        if packet.haslayer(UDP) and packet.haslayer(IP):
+            #self.__logger.debug(f"Capture d'un packet UDP de {packet[IP].src} sur le port {packet[UDP].dport}")
+            self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
+            return
         pass

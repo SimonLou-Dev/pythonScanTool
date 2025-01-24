@@ -24,11 +24,6 @@ def main():
     iface_parser.add_argument("--save", "-s", action="store_true", help="Sauvegarder les paquets capturés dans un fichier PCAP")
     add_common_network_options(iface_parser)
 
-    # ============== Module Network : Logs capture ==============
-    logs_parser = network_subparsers.add_parser("logs", help="Analyse de fichiers de logs web (Apache/Nginx)")
-    logs_parser.add_argument("file", help="Chemin vers le fichier de logs")
-    logs_parser.add_argument("-t", "--type", required=True, help="Type de logs", choices=["apache", "nginx"])
-    add_common_network_options(logs_parser)
     # ============== Module Web ==============
 
     web_parser = subparsers.add_parser("web", help="Options liées aux tests web")
@@ -64,10 +59,6 @@ def main():
             from tools.network.NetworkModule import NetworkModule, NetworkSourceType
             network = NetworkModule(logger, NetworkSourceType.LIVE_CAP, iface=args.iface, save=args.save)
             network.run()
-        elif args.network_mode == "logs":
-            from tools.network.NetworkModule import NetworkModule, NetworkSourceType
-            network = NetworkModule(logger, NetworkSourceType.LOG_NGINX if args.type == "nginx" else NetworkSourceType.LOG_APACHE, args.file)
-            network.run()
     elif args.mode == "web":
         pass
         #from tools.web.WebModule import WebModule
@@ -81,6 +72,7 @@ def add_common_network_options(parser):
     common_group.add_argument("--path-bf", "-b", action="store_true", help="Détecter les scans bruteforce d'URLs")
     common_group.add_argument("--http-passwords", "-p", action="store_true", help="Détecter les mots de passe HTTP en clair")
     common_group.add_argument("--http-credentials", "-c", action="store_true", help="Détecter les credentials HTTP en base64")
+
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ from termcolor import colored
 from enum import Enum
 
 class LogLevel(Enum):
-    DEBUG = 'grey'
+    DEBUG = 'blue'
     INFO = 'green'
     WARN = 'yellow'
     ERROR = 'red'
