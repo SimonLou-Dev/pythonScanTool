@@ -56,7 +56,7 @@ class NetworkModule:
         self.__logger.info(f" \t- Détecter les scans bruteforce d'URLs : {enable_path_bf}")
         self.__logger.info(f" \t- Détecter les mots de passe HTTP en clair : {enable_http_passwords}")
         self.__logger.info(f" \t- Détecter les credentials HTTP en base64 : {enable_http_credentials}")
-        self.__logger.info(f" \t- Mode : {self.__mode}")
+        self.__logger.info(f"Mode : {self.__mode}")
 
         self.__arp_fscanner = FrequencyAnalyser(self.__logger)
         self.__fuzz_fscanner = FrequencyAnalyser(self.__logger)
@@ -74,6 +74,7 @@ class NetworkModule:
     def __read_from_pcap(self):
         self.__logger.info(f"Analyse du fichier pcap : {self.__file}")
         scapy_cap = rdpcap(self.__file)
+        self.__logger.info(f"Nombre de paquets : {len(scapy_cap)}")
         for packet in scapy_cap:
             self.__analyse_packet(packet)
 
@@ -118,11 +119,11 @@ class NetworkModule:
             self.__ping_fscanner.check({"src": packet[IP].src}, int(packet.time))
             return
         if packet.haslayer(TCP) and packet.haslayer(IP):
-            #self.__logger.debug(f"Capture d'un packet TCP de {packet[IP].src} sur le port {packet[TCP].dport}")
+            self.__logger.debug(f"Capture d'un packet TCP de {packet[IP].src} sur le port {packet[TCP].dport}")
             self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
             return
         if packet.haslayer(UDP) and packet.haslayer(IP):
-            #self.__logger.debug(f"Capture d'un packet UDP de {packet[IP].src} sur le port {packet[UDP].dport}")
+            self.__logger.debug(f"Capture d'un packet UDP de {packet[IP].src} sur le port {packet[UDP].dport}")
             self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
             return
         pass

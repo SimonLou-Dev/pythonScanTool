@@ -29,7 +29,7 @@ class Logger:
             return
 
         # Colorier le message avant de l'afficher
-        print(colored(f"[{level}] {message}", level.value))
+        print(colored(f"{message}", level.value))
 
 
     def debug(self, message: str):
