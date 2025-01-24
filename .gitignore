@@ -1,5 +1,6 @@
 # Original file:
 **/*.pcap
+!example.pcap
 **/*.log
 **/*.logs
 

@@ -113,7 +113,7 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Detections</th>
+                <th>Detections (en nombre de secondes)</th>
             </tr>
             {% for entry in results.arp_scan %}
             <tr>
@@ -122,8 +122,6 @@
             </tr>
             {% endfor %}
         </table>
-        {% elif not options.passwords and not options.creds %}
-        <p>Fuzz scan disabled.</p>
         {% else %}
         <p>No results for ARP Scan.</p>
         {% endif %}
@@ -133,7 +131,7 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Detections</th>
+                <th>Detections (en nombre de secondes)</th>
             </tr>
             {% for entry in results.icmp_scan %}
             <tr>
@@ -151,7 +149,7 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Detections</th>
+                <th>Detections (en nombre de secondes)</th>
             </tr>
             {% for entry in results.port_scan %}
             <tr>
@@ -169,11 +167,13 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Detections</th>
+                <th>Cible</th>
+                <th>Detections (en nombre de secondes)</th>
             </tr>
             {% for entry in results.fuzz_scan %}
             <tr>
                 <td>{{ entry.src }}</td>
+                <td>{{ entry.value }}</td>
                 <td>{{ entry.occ }}</td>
             </tr>
             {% endfor %}

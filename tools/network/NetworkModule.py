@@ -8,7 +8,7 @@ import threading
 import re
 import base64
 from scapy.layers.inet import IP, ICMP, TCP, UDP
-from scapy.layers.http import HTTPRequest
+from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from scapy.layers.l2 import ARP
 from jinja2 import Environment, FileSystemLoader
 
@@ -126,35 +126,68 @@ class NetworkModule:
         #print("ARP", self.__arp_fscanner.result())
         #print("ICMP", self.__ping_fscanner.result())
 
-        analysed = False
+
+
 
         if self.__save and self.__mode == NetworkSourceType.LIVE_CAP:
             scapy.sendrecv.wrpcap(self.__pcap_file, packet, append=True)
-        if packet.haslayer(HTTPRequest) and packet.haslayer(IP):
+        if packet.haslayer(HTTPRequest) and packet.haslayer(IP): # Quand scapy arrive à déconstruire le paquet HTTP
             host = packet[HTTPRequest].Host.decode()
             url = packet[HTTPRequest].Path.decode()
             self.__detect_password_in_http(packet, host + url)
             self.__logger.debug(f"Capture d'un packet HTTP de {packet[IP].src} sur le site {host}")
-            if self.__path_bf:
+            if self.__path_bf is True:
                 self.__fuzz_fscanner.check({"src": packet[IP].src, "value": host}, int(packet.time))
+            return
+        if packet.haslayer(TCP) and packet.haslayer(IP) and "P" in packet[TCP].flags: # Si c'est un paquet SYN
+
+            if self.__analyse_tcp_packet(packet): return  # Le parser  scapy ne marche pour l'HTTPS et l'HTTP (pour le curl) alors on improvise
+            self.__logger.debug(f"Capture d'un packet TCP de {packet[IP].src} sur le port {packet[TCP].dport}")
+            self.__namp_fscanner.check({"src": packet[IP].src, "value": "TCP-UDP"}, int(packet.time))
             return
         if packet.haslayer(UDP) and packet.haslayer(IP):
             self.__logger.debug(f"Capture d'un packet UDP de {packet[IP].src} sur le port {packet[UDP].dport}")
-            self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
-            return
-        if packet.haslayer(TCP) and packet.haslayer(IP):
-            self.__logger.debug(f"Capture d'un packet TCP de {packet[IP].src} sur le port {packet[TCP].dport}")
-            self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
+            self.__namp_fscanner.check({"src": packet[IP].src, "value": "TCP-UDP"}, int(packet.time))
             return
         if packet.haslayer(ICMP) and packet.haslayer(IP) and packet[ICMP].type == 8: #Si c'est une requête ICMP
             self.__logger.debug(f"Capture d'un packet ICMP de {packet[IP].src}")
-            self.__ping_fscanner.check({"src": packet[IP].src}, int(packet.time))
+            self.__ping_fscanner.check({"src": packet[IP].src, "value": "ICMP"}, int(packet.time))
             return
         if packet.haslayer(ARP) and packet[ARP].op == 1: # Si c'est un paquet ARP
             self.__logger.debug(f"Capture d'un packet ARP de {packet[ARP].psrc}")
-            self.__arp_fscanner.check({"src": packet[ARP].psrc}, int(packet.time))
+            self.__arp_fscanner.check({"src": packet[ARP].psrc, "value": "ARP"}, int(packet.time))
             return
 
+    ## Analyser les paquets TCP au cas ou ça soit du HTTP(S)
+    def __analyse_tcp_packet(self, packet) -> bool:
+        if packet[TCP].payload:
+            raw_data = packet[TCP].payload.load
+            if b"HTTP" in raw_data or b"HTTPS" in raw_data:
+                self.__logger.debug(f"Capture d'un packet HTTP de {packet[IP].src}")
+                try:
+                    raw_str = raw_data.decode('utf-8', errors='ignore')
+                except UnicodeDecodeError:
+                    return False  # Skip if the data can't be decoded
+                hostname = "?"
+                if re.match(r"^(GET|POST|PUT|DELETE|HEAD|OPTIONS|PATCH)", raw_str): # Les requêtes HTTP commencent par une méthode
+                    # Try to extract the Host header using a regex pattern
+                    host_match = re.search(r"Host: ([^\r\n]+)", raw_str)
+                    if host_match:
+                        hostname = host_match.group(1)
+                        self.__logger.debug(f"Capture d'un packet HTTP de  {packet[IP].src} à destination de: {hostname}")
+                    else:
+                        self.__logger.debug(f"Capture d'un packet HTTP de {packet[IP].src} à destination de ?")
+                    if self.__path_bf:
+                        self.__fuzz_fscanner.check({"src": packet[IP].src, "value": hostname}, int(packet.time))
+                    if b"HTTP" in raw_data:
+                        self.__detect_password_in_http(packet, packet[IP].src)
+                    return True
+
+            # Si ce n'est pas une requête alors c'est une réponse
+            self.__logger.debug(f"Capture d'un packet HTTP response à destination de {packet[IP].dst} en provenance de {packet[IP].src}")
+            return True
+
+        return False
 
     ## Détection dans le HTTP
     def __detect_password_in_http(self, packet, url):
@@ -182,8 +215,6 @@ class NetworkModule:
 
     # Génération du rapport
     def __generate_report(self):
-        print(self.__arp_fscanner.result())
-        print(self.__ping_fscanner.result())
         self.__logger.info("Préparation du rapport...")
         env = Environment(loader=FileSystemLoader("./tools/network"))
         template = env.get_template("report_template.html.j2")

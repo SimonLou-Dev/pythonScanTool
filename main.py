@@ -58,7 +58,7 @@ def main():
         elif args.network_mode == "iface":
             from tools.network.NetworkModule import NetworkModule, NetworkSourceType
             network = NetworkModule(logger, NetworkSourceType.LIVE_CAP, iface=args.iface, save=args.save)
-            network.run()
+            network.run(args.path_bf, args.http_passwords, args.http_credentials)
     elif args.mode == "web":
         pass
         #from tools.web.WebModule import WebModule
