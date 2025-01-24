@@ -17,16 +17,16 @@ from tools.utils.frequencyAnalyser import FrequencyAnalyser
 
 
 class NetworkSourceType(Enum):
-    LIVE_CAP = 3
-    FILE_PCAP = 4
+    LIVE_CAP = 0
+    FILE_PCAP = 1
 
     def __str__(self):
         return self.name.replace("_", " ").title()
 
 class NetworkModule:
     __mode: NetworkSourceType
-    __file: str | None
-    __iface: str | None
+    __file: str | None = None
+    __iface: str | None = None
     __save: bool = False
     __logger: Logger
     __namp_fscanner: FrequencyAnalyser
@@ -122,13 +122,14 @@ class NetworkModule:
 
     ## Analyser
     def __analyse_packet(self, packet):
+
+        #print("ARP", self.__arp_fscanner.result())
+        #print("ICMP", self.__ping_fscanner.result())
+
+        analysed = False
+
         if self.__save and self.__mode == NetworkSourceType.LIVE_CAP:
             scapy.sendrecv.wrpcap(self.__pcap_file, packet, append=True)
-
-        if packet.haslayer(ARP) and packet[ARP].op == 1: # Si c'est un paquet ARP
-            self.__logger.debug(f"Capture d'un packet ARP de {packet[ARP].psrc}")
-            self.__arp_fscanner.check({"src": packet[ARP].psrc}, int(packet.time))
-            return
         if packet.haslayer(HTTPRequest) and packet.haslayer(IP):
             host = packet[HTTPRequest].Host.decode()
             url = packet[HTTPRequest].Path.decode()
@@ -137,19 +138,23 @@ class NetworkModule:
             if self.__path_bf:
                 self.__fuzz_fscanner.check({"src": packet[IP].src, "value": host}, int(packet.time))
             return
-        if packet.haslayer(ICMP) and packet.haslayer(IP) and packet[ICMP].type == 8: #Si c'est une requête ICMP
-            self.__logger.debug(f"Capture d'un packet ICMP de {packet[IP].src}")
-            self.__ping_fscanner.check({"src": packet[IP].src}, int(packet.time))
+        if packet.haslayer(UDP) and packet.haslayer(IP):
+            self.__logger.debug(f"Capture d'un packet UDP de {packet[IP].src} sur le port {packet[UDP].dport}")
+            self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
             return
         if packet.haslayer(TCP) and packet.haslayer(IP):
             self.__logger.debug(f"Capture d'un packet TCP de {packet[IP].src} sur le port {packet[TCP].dport}")
             self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
             return
-        if packet.haslayer(UDP) and packet.haslayer(IP):
-            self.__logger.debug(f"Capture d'un packet UDP de {packet[IP].src} sur le port {packet[UDP].dport}")
-            self.__namp_fscanner.check({"src": packet[IP].src}, int(packet.time))
+        if packet.haslayer(ICMP) and packet.haslayer(IP) and packet[ICMP].type == 8: #Si c'est une requête ICMP
+            self.__logger.debug(f"Capture d'un packet ICMP de {packet[IP].src}")
+            self.__ping_fscanner.check({"src": packet[IP].src}, int(packet.time))
             return
-        pass
+        if packet.haslayer(ARP) and packet[ARP].op == 1: # Si c'est un paquet ARP
+            self.__logger.debug(f"Capture d'un packet ARP de {packet[ARP].psrc}")
+            self.__arp_fscanner.check({"src": packet[ARP].psrc}, int(packet.time))
+            return
+
 
     ## Détection dans le HTTP
     def __detect_password_in_http(self, packet, url):
@@ -177,11 +182,17 @@ class NetworkModule:
 
     # Génération du rapport
     def __generate_report(self):
-        env = Environment(loader=FileSystemLoader("templates"))
+        print(self.__arp_fscanner.result())
+        print(self.__ping_fscanner.result())
+        self.__logger.info("Préparation du rapport...")
+        env = Environment(loader=FileSystemLoader("./tools/network"))
         template = env.get_template("report_template.html.j2")
         report_data = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "mode": self.__mode.name,
+            "mode": {
+                "value": self.__mode,
+                "number": self.__mode.value
+            },
             "interface": self.__iface,
             "pcap_file": self.__file,
             "options": {
@@ -195,5 +206,14 @@ class NetworkModule:
                 "icmp_scan": self.__ping_fscanner.result(),
                 "port_scan": self.__namp_fscanner.result(),
                 "fuzz_scan": self.__fuzz_fscanner.result()
+            },
+            "save": {
+                "state": self.__save,
+                "file": self.__pcap_file
             }
         }
+        self.__logger.info("Génération du rapport...")
+        with open("report.html", "w") as f:
+            f.write(template.render(report_data))
+        self.__logger.info("Rapport généré dans ./report.html")
+        pass

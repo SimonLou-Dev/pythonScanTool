@@ -8,6 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            line-height: 1.6;
         }
         h1, h2 {
             color: #333;
@@ -18,6 +19,7 @@
         .section h2 {
             color: #555;
             border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
         }
         table {
             border-collapse: collapse;
@@ -28,14 +30,22 @@
             border: 1px solid #ddd;
         }
         th, td {
-            padding: 8px;
+            padding: 10px;
             text-align: left;
         }
         th {
-            background-color: #f4f4f4;
+            background-color: #f9f9f9;
         }
         .highlight {
             color: red;
+            font-weight: bold;
+        }
+        ul {
+            list-style-type: square;
+            margin-left: 20px;
+        }
+        p {
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -44,64 +54,78 @@
     <p><strong>Date:</strong> {{ timestamp }}</p>
 
     <div class="section">
-        <h2>Mode de Capture</h2>
+        <h2>Capture Mode</h2>
         <p>
-            Mode: <strong>{{ mode }}</strong><br>
-            {% if mode == "live" %}
+            Mode: <strong>{{ mode.value }}</strong><br>
+            {% if mode.number == 0 %}
             Interface: <strong>{{ interface }}</strong>
-            {% elif mode == "pcap" %}
-            Fichier PCAP: <strong>{{ pcap_file }}</strong>
+            {% elif mode.number == 1 %}
+            PCAP File: <strong>{{ pcap_file }}</strong>
             {% endif %}
         </p>
     </div>
 
     <div class="section">
-        <h2>Options Activées</h2>
+        <h2>Activated Options</h2>
         <ul>
             <li>Fuzzing: <strong>{{ options.fuzzing }}</strong></li>
-            <li>Recherche de mots de passe: <strong>{{ options.passwords }}</strong></li>
-            <li>Recherche de credentials: <strong>{{ options.creds }}</strong></li>
+            <li>Password Search: <strong>{{ options.passwords }}</strong></li>
+            <li>Credential Search: <strong>{{ options.creds }}</strong></li>
         </ul>
     </div>
 
+    {% if mode.number == 0 %}
     <div class="section">
-        <h2>Credentials Trouvés</h2>
+        <h2>Save Settings</h2>
+        <p>
+            Enabled: <strong>{{ save.state }}</strong><br>
+            {% if save.state %}
+            File: <strong>{{ save.file }}</strong>
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2>Credentials Found</h2>
         {% if results.creds %}
         <table>
             <tr>
-                <th>Source (IP)</th>
-                <th>Nombre de détections</th>
+                <th>url</th>
+                <th>secret</th>
             </tr>
             {% for cred in results.creds %}
             <tr>
-                <td>{{ cred.source }}</td>
-                <td>{{ cred.nombre_detection }}</td>
+                <td>{{ cred.url }}</td>
+                <td>{{ cred.secret }}</td>
             </tr>
             {% endfor %}
         </table>
         {% else %}
-        <p>Aucun credential trouvé.</p>
+        <p>No credentials found.</p>
         {% endif %}
     </div>
 
     <div class="section">
-        <h2>Résultats des Scanners</h2>
+        <h2>Scanner Results</h2>
         <h3>ARP Scan</h3>
         {% if results.arp_scan %}
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Nombre de détections</th>
+                <th>Detections</th>
             </tr>
             {% for entry in results.arp_scan %}
             <tr>
-                <td>{{ entry.source }}</td>
-                <td>{{ entry.nombre_detection }}</td>
+                <td>{{ entry.src }}</td>
+                <td>{{ entry.occ }}</td>
             </tr>
             {% endfor %}
         </table>
+        {% elif not options.passwords and not options.creds %}
+        <p>Fuzz scan disabled.</p>
         {% else %}
-        <p>Aucun résultat pour ARP Scan.</p>
+        <p>No results for ARP Scan.</p>
         {% endif %}
 
         <h3>ICMP Scan</h3>
@@ -109,17 +133,17 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Nombre de détections</th>
+                <th>Detections</th>
             </tr>
             {% for entry in results.icmp_scan %}
             <tr>
-                <td>{{ entry.source }}</td>
-                <td>{{ entry.nombre_detection }}</td>
+                <td>{{ entry.src }}</td>
+                <td>{{ entry.occ }}</td>
             </tr>
             {% endfor %}
         </table>
         {% else %}
-        <p>Aucun résultat pour ICMP Scan.</p>
+        <p>No results for ICMP Scan.</p>
         {% endif %}
 
         <h3>Port Scan</h3>
@@ -127,17 +151,17 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Nombre de détections</th>
+                <th>Detections</th>
             </tr>
             {% for entry in results.port_scan %}
             <tr>
-                <td>{{ entry.source }}</td>
-                <td>{{ entry.nombre_detection }}</td>
+                <td>{{ entry.src }}</td>
+                <td>{{ entry.occ }}</td>
             </tr>
             {% endfor %}
         </table>
         {% else %}
-        <p>Aucun résultat pour Port Scan.</p>
+        <p>No results for Port Scan.</p>
         {% endif %}
 
         <h3>Fuzzing Scan</h3>
@@ -145,17 +169,19 @@
         <table>
             <tr>
                 <th>Source (IP)</th>
-                <th>Nombre de détections</th>
+                <th>Detections</th>
             </tr>
             {% for entry in results.fuzz_scan %}
             <tr>
-                <td>{{ entry.source }}</td>
-                <td>{{ entry.nombre_detection }}</td>
+                <td>{{ entry.src }}</td>
+                <td>{{ entry.occ }}</td>
             </tr>
             {% endfor %}
         </table>
+        {% elif not options.fuzzing %}
+        <p>Fuzz scan disabled.</p>
         {% else %}
-        <p>Aucun résultat pour Fuzzing Scan.</p>
+        <p>No results for Fuzzing Scan.</p>
         {% endif %}
     </div>
 </body>

@@ -9,5 +9,6 @@
 **/__pycache__/**
 
 # Wordlist
-rockyou.txt
-fuzz.txt
+**/rockyou.txt
+**/fuzz.txt
+**/report.html
