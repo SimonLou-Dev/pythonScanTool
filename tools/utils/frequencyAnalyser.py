@@ -28,3 +28,6 @@ class FrequencyAnalyser:
                 self.__flagged.append(key)
                 self.__logger.warn(f"Flagged {key} with {occ} more {self.__flagOccurences} per seconds")
         return
+
+    def result(self):
+        pass

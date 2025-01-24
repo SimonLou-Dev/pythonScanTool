@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capture Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #555;
+            border-bottom: 1px solid #ddd;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .highlight {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Capture Report</h1>
+    <p><strong>Date:</strong> {{ timestamp }}</p>
+
+    <div class="section">
+        <h2>Mode de Capture</h2>
+        <p>
+            Mode: <strong>{{ mode }}</strong><br>
+            {% if mode == "live" %}
+            Interface: <strong>{{ interface }}</strong>
+            {% elif mode == "pcap" %}
+            Fichier PCAP: <strong>{{ pcap_file }}</strong>
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Options Activées</h2>
+        <ul>
+            <li>Fuzzing: <strong>{{ options.fuzzing }}</strong></li>
+            <li>Recherche de mots de passe: <strong>{{ options.passwords }}</strong></li>
+            <li>Recherche de credentials: <strong>{{ options.creds }}</strong></li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Credentials Trouvés</h2>
+        {% if results.creds %}
+        <table>
+            <tr>
+                <th>Source (IP)</th>
+                <th>Nombre de détections</th>
+            </tr>
+            {% for cred in results.creds %}
+            <tr>
+                <td>{{ cred.source }}</td>
+                <td>{{ cred.nombre_detection }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Aucun credential trouvé.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Résultats des Scanners</h2>
+        <h3>ARP Scan</h3>
+        {% if results.arp_scan %}
+        <table>
+            <tr>
+                <th>Source (IP)</th>
+                <th>Nombre de détections</th>
+            </tr>
+            {% for entry in results.arp_scan %}
+            <tr>
+                <td>{{ entry.source }}</td>
+                <td>{{ entry.nombre_detection }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Aucun résultat pour ARP Scan.</p>
+        {% endif %}
+
+        <h3>ICMP Scan</h3>
+        {% if results.icmp_scan %}
+        <table>
+            <tr>
+                <th>Source (IP)</th>
+                <th>Nombre de détections</th>
+            </tr>
+            {% for entry in results.icmp_scan %}
+            <tr>
+                <td>{{ entry.source }}</td>
+                <td>{{ entry.nombre_detection }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Aucun résultat pour ICMP Scan.</p>
+        {% endif %}
+
+        <h3>Port Scan</h3>
+        {% if results.port_scan %}
+        <table>
+            <tr>
+                <th>Source (IP)</th>
+                <th>Nombre de détections</th>
+            </tr>
+            {% for entry in results.port_scan %}
+            <tr>
+                <td>{{ entry.source }}</td>
+                <td>{{ entry.nombre_detection }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Aucun résultat pour Port Scan.</p>
+        {% endif %}
+
+        <h3>Fuzzing Scan</h3>
+        {% if results.fuzz_scan %}
+        <table>
+            <tr>
+                <th>Source (IP)</th>
+                <th>Nombre de détections</th>
+            </tr>
+            {% for entry in results.fuzz_scan %}
+            <tr>
+                <td>{{ entry.source }}</td>
+                <td>{{ entry.nombre_detection }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>Aucun résultat pour Fuzzing Scan.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
