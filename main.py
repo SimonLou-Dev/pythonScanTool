@@ -51,21 +51,40 @@ def main() -> None:
     web_parser.add_argument("-u", "--url", help="URL cible pour les tests")
     web_parser.add_argument("-l", "--list", help="Fichier contenant une liste d'URLs")
     web_parser.add_argument(
+        "-pgw",
+        "--pagewordlist",
+        help="Fichier contenant une liste de mots à comparer",
+        )
+    web_parser.add_argument(
+        "-uw",
+        "--userwordlist",
+        help="Fichier contenant une liste de mots à comparer",
+        )
+    web_parser.add_argument(
+        "-psw",
+        "--passwordlist",
+        help="Fichier contenant une liste de mots à comparer",
+        )
+    web_parser.add_argument(
         "--csp",
         action="store_true",
         help="Activer le test des politiques CSP",
         )
     web_parser.add_argument(
-        "--bruteforce",
+        "--pages",
         action="store_true",
-        help="Activer le brute force des paths",
+        help="Activer le listing de pages sensibles",
         )
     web_parser.add_argument(
-        "--sql",
+        "--sqli",
         action="store_true",
         help="Activer l'identification de données exploitables (SQLi)",
         )
-
+    web_parser.add_argument(
+        "--bruteforms",
+        action="store_true",
+        help="Activer le test de bruteforce sur les formulaires d'authentification",
+        )
     parser.add_argument(
         "--verbose",
         "-v",
@@ -103,10 +122,9 @@ def main() -> None:
                 )
             network.run(args.path_bf, args.http_passwords, args.http_credentials)
     elif args.mode == "web":
-        pass
-        #from tools.web.WebModule import WebModule
-        #web = WebModule(args.url, args.list)
-        #web.run()
+        from tools.web.WebModule import WebModule
+        web = WebModule(logger, args.url, args.pagewordlist, args.userwordlist, args.passwordlist)
+        web.run(args.csp, args.pages, args.sqli, args.bruteforms)
 
 
 

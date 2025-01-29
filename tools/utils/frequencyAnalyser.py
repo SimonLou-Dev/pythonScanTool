@@ -1,6 +1,7 @@
 
 from tools.utils.logger import Logger, LogLevel
 
+
 class FrequencyAnalyser:
     __lastSeconds: int = 0
     __flagOccurences: int = 5 #Number of occurences par sec

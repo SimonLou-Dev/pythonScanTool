@@ -222,29 +222,28 @@ class NetworkModule:
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "mode": {
                 "value": self.__mode,
-                "number": self.__mode.value
+                "number": self.__mode.value,
             },
             "interface": self.__iface,
             "pcap_file": self.__file,
             "options": {
                 "fuzzing": self.__path_bf,
                 "passwords": self.__find_pass,
-                "creds": self.__find_cred
+                "creds": self.__find_cred,
             },
             "results": {
                 "creds": self.__passwordAndCred,
                 "arp_scan": self.__arp_fscanner.result(),
                 "icmp_scan": self.__ping_fscanner.result(),
                 "port_scan": self.__namp_fscanner.result(),
-                "fuzz_scan": self.__fuzz_fscanner.result()
+                "fuzz_scan": self.__fuzz_fscanner.result(),
             },
             "save": {
                 "state": self.__save,
-                "file": self.__pcap_file
-            }
+                "file": self.__pcap_file,
+            },
         }
         self.__logger.info("Génération du rapport...")
         with open("report.html", "w") as f:
             f.write(template.render(report_data))
         self.__logger.info("Rapport généré dans ./report.html")
-        pass

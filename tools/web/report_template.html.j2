@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Analysis Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #555;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        .highlight {
+            color: red;
+            font-weight: bold;
+        }
+        ul {
+            list-style-type: square;
+            margin-left: 20px;
+        }
+        p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web Analysis Report</h1>
+    <p><strong>Date:</strong> {{ timestamp }}</p>
+
+    <div class="section">
+        <h2>Web Analysis Summary</h2>
+        <p>Analyzing website: <strong>{{ base_url }}</strong></p>
+        <ul>
+            <li>CSP Header: <strong>{{ results.csp }}</strong></li>
+            <li>Sensitive Pages Found: <strong>{{ results.sensitive_pages | length }}</strong></li>
+            <li>SQL Injection Vulnerabilities: <strong>{{ results.sqli | length }}</strong></li>
+            <li>Authentication Bypass Attempts: <strong>{{ results.auth_bypass | length }}</strong></li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Sensitive Pages</h2>
+        {% if results.sensitive_pages %}
+        <table>
+            <tr>
+                <th>Page URL</th>
+            </tr>
+            {% for page in results.sensitive_pages %}
+            <tr>
+                <td>{{ page }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>No sensitive pages found.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>SQL Injection Attempts</h2>
+        {% if results.sqli %}
+        <table>
+            <tr>
+                <th>Payload</th>
+                <th>Detected On</th>
+            </tr>
+            {% for payload in results.sqli %}
+            <tr>
+                <td>{{ payload.payload }}</td>
+                <td>{{ payload.url }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>No SQL Injection vulnerabilities detected.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Authentication Bypass Attempts (Can be false positive)</h2>
+        {% if results.auth_bypass %}
+        <table>
+            <tr>
+                <th>User</th>
+                <th>Password</th>
+                <th>Detected On</th>
+            </tr>
+            {% for attempt in results.auth_bypass %}
+            <tr>
+                <td>{{ attempt.user }}</td>
+                <td>{{ attempt.password }}</td>
+                <td>{{ attempt.url }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>No authentication bypass detected.</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>
