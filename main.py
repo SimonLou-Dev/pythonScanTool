@@ -49,7 +49,6 @@ def main() -> None:
 
     web_parser = subparsers.add_parser("web", help="Options liées aux tests web")
     web_parser.add_argument("-u", "--url", help="URL cible pour les tests")
-    web_parser.add_argument("-l", "--list", help="Fichier contenant une liste d'URLs")
     web_parser.add_argument(
         "-pgw",
         "--pagewordlist",
