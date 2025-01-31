@@ -80,7 +80,7 @@ Ce mode permet de réaliser des tests automatisés sur des applications web.
 python main.py web [options]
 
     URL cible : URL de l'application web à tester.
-        Exemple : python main.py web http://example.com
+        Exemple : python main.py web -u http://example.com
 
     Options supplémentaires :
         CSP : Activer le test des politiques CSP (--csp).
